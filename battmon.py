@@ -2,12 +2,18 @@
 
 # python script showing battery details
 import psutil
-from xnotify import notify
+try:
+    from xnotify import notify
+except:
+    pass
 from make_colors import make_colors
 import sys
 import traceback
 import time
-import cmdw
+try:
+    import cmdw
+except:
+    pass
 from datetime import datetime
 
 # function returning time in hh:mm:ss
@@ -17,7 +23,10 @@ def convertTime(seconds):
     return "%d:%02d:%02d" % (hours, minutes, seconds)
 
 def run():
-    print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " " + "-"*(cmdw.getWidth() - 30))
+    try:
+        print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " " + "-"*(cmdw.getWidth() - 30))
+    except:
+        print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " ------- ")
     try:
         while 1:
             # returns a tuple
@@ -29,14 +38,23 @@ def run():
             # converting seconds to hh:mm:ss
             print(make_colors("Battery left", 'lg'), "      : " + make_colors(str(convertTime(battery.secsleft)), 'b', 'lg'))
             if str(battery.percent) == '100':
-                notify('Battery Monitor', 'battmon', 'FULL', 'Battery is FULL')
+                try:
+                    notify('Battery Monitor', 'battmon', 'FULL', 'Battery is FULL')
+                except:
+                    print(make_colors("BATTERY FULL !", 'lw', 'r'))
                 time.sleep(5)
             elif int(battery.percent) <= 10:
-                notify('Battery Monitor', 'battmon', 'LOW', 'Battery is LOW')
+                try:
+                    notify('Battery Monitor', 'battmon', 'LOW', 'Battery is LOW')
+                except:
+                    print(make_colors("BATTERY LOW !", 'lw', 'r'))
                 time.sleep(1)
             else:
                 time.sleep(60)
-            print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " " + "-"*(cmdw.getWidth() - 30))
+            try:
+                print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " " + "-"*(cmdw.getWidth() - 30))
+            except:
+                print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " ------- ")
     except KeyboardInterrupt:
         print(make_colors("Terminated !", 'lw', 'r'))
         sys.exit()
