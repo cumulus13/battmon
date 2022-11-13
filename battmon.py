@@ -75,7 +75,7 @@ def run():
                 #except:
                 print(make_colors("BATTERY FULL !", 'lw', 'r'))
                 time.sleep((config.get_config('sleep', 'fulltime', '1') or 1))
-            elif int(battery.percent) == 99:
+            elif int(battery.percent) == 99 and battery.power_plugged:
                 #try:
                 notify.send('Battery is 99', 'Battery is 99', 'battmon', 'FULL', icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'icon.png'))
                 #except:
