@@ -115,7 +115,7 @@ def run(test = False):
                 if config.get_config('remind', 'ten'):
                     #nx = 0
                     if config.get_config('step', str(percent)):
-                        for x in range(nx, config.get_config('remind', 'times', '2') + 1):
+                        for x in range(0, config.get_config('remind', 'times', '2') + 1):
                             if not x == config.get_config('remind', 'times', '2'):
                                 #nx += 1
                                 stat = "DC - Unplug"
