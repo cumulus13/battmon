@@ -5,11 +5,7 @@ import psutil
 import traceback
 import sys, os
 sys.excepthook = traceback.format_exception
-#try:
 from xnotify import notify
-#except:
-    #print(traceback.format_exc())
-    #pass
 from make_colors import make_colors
 import time
 try:
@@ -50,6 +46,8 @@ def set_color(status, low = 10, height = 100):
         return make_colors(status, 'b', 'lc')
     elif int(status) == 100:
         return make_colors(status, 'b', 'y')
+    else:
+        return make_colors(status, 'r', 'lw')
 
 def set_color_plugged(status):
     if status:
@@ -61,7 +59,7 @@ def run(test = False):
     notify.ntfy_server = ntfy_servers
     nine = 0
     try:
-        print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "]" + "-"*(cmdw.getWidth() - 38))
+        print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "]" + "-"*(cmdw.getWidth() - 40))
     except:
         print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] ------- ")
     try:
@@ -75,16 +73,17 @@ def run(test = False):
             else:
                 test = ''
                 test1 = ''
+            #print("battery.percent:", battery.percent)
             print(
                 make_colors("Battery stat", 'lg'), "      : " + "[{}]".format(set_color(battery.percent)) + " [" \
                 + make_colors(str(convertTime(battery.secsleft)), 'lc') + "] [" \
-                + set_color_plugged(battery.power_plugged) + "]" + test
+                + set_color_plugged(battery.power_plugged) + "] [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test
             )
             if int(battery.percent) == 100 and  battery.power_plugged:
                 #try:
                 notify.send('Battery is FULL', 'Battery is FULL' + test1, 'battmon', 'FULL', icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '100.png'))
                 #except:
-                print(make_colors("BATTERY FULL !", 'lw', 'r') + test)
+                print(make_colors("BATTERY FULL !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
                 for i in [10, 11, 20, 30, 40, 50, 60, 70, 80, 90, 98]:
                     config.write_config('step', str(i), '0')
                 time.sleep((config.get_config('sleep', 'fulltime', '2') or 2))
@@ -92,7 +91,7 @@ def run(test = False):
                 #try:
                 notify.send('Battery is 99', 'Battery is 99' + test1, 'battmon', 'FULL', icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '90.png'))
                 #except:
-                print(make_colors("BATTERY is 99 !", 'lw', 'r') + test)
+                print(make_colors("BATTERY is 99 !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
                 time.sleep((config.get_config('sleep', 'willtime', '5') or 5))
                 if not nine == (config.get_config('nine', 'times', '5') or 5):
                     nine += 1
@@ -101,9 +100,13 @@ def run(test = False):
             elif int(battery.percent) <= 10 and not battery.power_plugged:
                 config.write_config('nine', 'done', '0')
                 #try:
-                notify.send('Battery is LOW', 'Battery is LOW' + test1, 'battmon', 'LOW', icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '10.png'))
+                nl = 0
+                if not nl > config.get_config('len10', 'times', 10):
+                    notify.send('Battery is LOW', 'Battery is LOW' + test1, 'battmon', 'LOW', icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '10.png'))
+                else:
+                    nl += 1
                 #except:
-                print(make_colors("BATTERY LOW !", 'lw', 'r') + test)
+                print(make_colors("BATTERY LOW !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
                 for i in [10, 11, 20, 30, 40, 50, 60, 70, 80, 90, 98]:
                     config.write_config('step', str(i), '1')                
                 time.sleep((config.get_config('sleep', 'lesstime', '1') or 1))    
@@ -126,9 +129,9 @@ def run(test = False):
                                 config.write_config('step', str(percent), '0')
                                 
             try:
-                print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " " + "-"*(cmdw.getWidth() - 30))
+                print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " " + "[" + make_colors(str(os.getpid()), 'b', 'y') + "] " + "-"*(cmdw.getWidth() - 40))
             except:
-                print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " ------- ")
+                print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + " ------- ")
     except KeyboardInterrupt:
         print(make_colors("Terminated !" + test1, 'lw', 'r'))
         sys.exit()
@@ -146,7 +149,10 @@ def usage():
         get()
     else:
         args = parser.parse_args()
-        run()
+        if args.monitor:
+            run()
+        else:
+            run()
 
 if __name__ == '__main__':
     usage()
