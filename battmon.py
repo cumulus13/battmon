@@ -1,7 +1,11 @@
 #!/usr/bin/envv python2
 
 # python script showing battery details
+import sys
+from ctraceback import CTraceback
+sys.excepthook = CTraceback
 import psutil
+import shutil
 import signal
 import traceback
 import sys, os
@@ -9,10 +13,6 @@ sys.excepthook = traceback.format_exception
 from xnotify import notify
 from make_colors import make_colors
 import time
-try:
-    import cmdw
-except:
-    pass
 from datetime import datetime
 import argparse
 from pydebugger.debug import debug
@@ -38,6 +38,7 @@ def speak(level = None):
         text = f"Battery Level is {level}%"
         engine.say(text)
         engine.runAndWait()
+        debug("end_speak")
 
 def speakfree(text = None):
     if text:
@@ -56,6 +57,7 @@ def speakfree(text = None):
         #text = f"Battery Level is {level}%"
         engine.say(text)
         engine.runAndWait()
+        debug("end_speak_free")
     
 def convertTime(seconds):
     minutes, seconds = divmod(seconds, 60)
@@ -98,10 +100,8 @@ def run(test = False):
     debug(ntfy_servers = ntfy_servers)
     notify.ntfy_server = ntfy_servers
     nine = 0
-    try:
-        print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "]" + "-"*(cmdw.getWidth() - 40))
-    except:
-        print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] ------- ")
+    print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "]" + "-"*shutil.get_terminal_size()[0])
+    
     try:
         last_status = None
         while 1:
@@ -109,30 +109,32 @@ def run(test = False):
             debug(battery = battery)
             #battery = 100
             # converting seconds to hh:mm:ss
+            test = ''
+            test1 = ''
             if test:
                 test = " " + make_colors("[TEST]", 'lw', 'r')
                 test1 = " [TEST]"
-            else:
-                test = ''
-                test1 = ''
-            #print("battery.percent:", battery.percent)
+                
             print(
                 make_colors("Battery stat", 'lg'), "      : " + "[{}]".format(set_color(battery.percent)) + " [" \
                 + make_colors(str(convertTime(battery.secsleft)), 'lc') + "] [" \
                 + set_color_plugged(battery.power_plugged) + "] [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test
             )
-            if not last_status or last_status != battery.power_plugged:
-                last_status = battery.power_plugged
-                status_str = 'plugged' if last_status else 'charging'
+            debug(last_status = last_status)
+            if last_status != psutil.sensors_battery().power_plugged:
+                debug("last_status != psutil.sensors_battery().power_plugged")
+                last_status = psutil.sensors_battery().power_plugged
+                
+                status_str = 'plug to charging' if last_status else 'unplug not charging discharging'
                 notify.send('battmon', 'PLUG', f'Battery is {status_str}', f'Battery is {status_str}' + test1, ['PLUG', 'FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'icon.png'), pushbullet = False)
-                #except:
+                
                 print(make_colors(f"BATTERY is {status_str} !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
-                speak(f"BATTERY is {status_str}!")
+                speakfree(f"BATTERY is {status_str}!")
                                 
             elif int(battery.percent) == 100 and battery.power_plugged:
-                #try:
+                debug("int(battery.percent) == 100 and battery.power_plugged")
                 notify.send('battmon', 'FULL', 'Battery is FULL', 'Battery is FULL' + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '100.png'), pushbullet = False)
-                #except:
+
                 print(make_colors("BATTERY FULL !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
                 speak(100)
                 
@@ -141,10 +143,9 @@ def run(test = False):
                 time.sleep((config.get_config('sleep', 'fulltime', '2') or 2))
             
             elif (int(battery.percent) == 99 or int(battery.percent) > 99) and battery.power_plugged and not config.get_config('nine', 'done'): 
-                #try:
-                #notify.send('Battery is 99', 'Battery is 99' + test1, 'battmon', 'FULL', icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '90.png'), pushbullet = False)
+                debug("(int(battery.percent) == 99 or int(battery.percent) > 99) and battery.power_plugged and not config.get_config('nine', 'done')")
                 notify.send('battmon', 'FULL', 'Battery is 99', 'Battery is 99' + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '90.png'), pushbullet = False)
-                #except:
+                
                 print(make_colors("BATTERY is 99 !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
                 speak(battery.percent)
                 time.sleep((config.get_config('sleep', 'willtime', '5') or 5))
@@ -152,50 +153,48 @@ def run(test = False):
                     nine += 1
                 else:
                     config.write_config('nine', 'done', '1')
+
             elif int(battery.percent) <= 32 and not battery.power_plugged:
+                debug("int(battery.percent) <= 32 and not battery.power_plugged")
                 config.write_config('nine', 'done', '0')
-                #try:
                 nl = 0
                 if not nl > config.get_config('len10', 'times', 10):
-                    #notify.send('Battery is LOW', 'Battery is LOW' + test1, 'battmon', 'LOW', icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '10.png'), pushbullet = False)
                     notify.send('battmon', 'LOW', 'Battery is LOW', 'Battery is LOW' + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '10.png'), pushbullet = False)
                 else:
                     nl += 1
-                #except:
+
                 print(make_colors("BATTERY LOW !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
                 speak(battery.percent)
                 for i in [10, 11, 20, 30, 40, 50, 60, 70, 80, 90, 98]:
                     config.write_config('step', str(i), '1')                
                 time.sleep((config.get_config('sleep', 'lesstime', '1') or 1))    
+
             else:
+                debug("ELSE")
                 time.sleep((config.get_config('sleep', 'idletime', '60') or 60))
             
             if int(battery.percent) in [11, 20, 30, 40, 50, 60, 70, 80, 90, 98]:
                 percent = battery.percent
                 if config.get_config('remind', 'ten'):
-                    #nx = 0
                     if config.get_config('step', str(percent)):
                         for x in range(0, config.get_config('remind', 'times', '2') + 1):
                             if not x == config.get_config('remind', 'times', '2'):
-                                #nx += 1
                                 stat = "DC - Unplug"
                                 if battery.power_plugged: stat = "AC - Plug"
                                 message = "Battery stat" + " : " + "[{}]".format(percent) + "\n" + str(convertTime(battery.secsleft)) + "\n" + stat + test1
                                 speakfree(f"Battery status is {stat} on level {percent}%")
-                                #notify.send('Battery STATUS', message, 'battmon', 'STATUS', icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '{}.png'.format(percent)), pushbullet = False)
                                 notify.send('battmon', 'STATUS', 'Battery STATUS', message + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '{}.png'.format(percent)), pushbullet = False)
                             else:
                                 config.write_config('step', str(percent), '0')
                                 
-            try:
-                print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " " + "[" + make_colors(str(os.getpid()), 'b', 'y') + "] " + "-"*(cmdw.getWidth() - 40))
-            except:
-                print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + " ------- ")
+            print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " " + "[" + make_colors(str(os.getpid()), 'b', 'y') + "] " + "-"*shutil.get_terminal_size()[0])
+
     except KeyboardInterrupt:
         print(make_colors("Terminated !" + test1, 'lw', 'r'))
         speakfree("Battmon Terminated !")
         os.kill(os.getpid(), signal.SIGTERM)
     except:
+        CTraceback(*sys.exc_info())
         print(make_colors('ERROR' + test1, 'lw', 'r') + ' ' + traceback.format_exc())
         speakfree("Battmon ERROR !")
         sys.exit()
