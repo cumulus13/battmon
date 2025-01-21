@@ -17,12 +17,19 @@ from datetime import datetime
 import argparse
 from pydebugger.debug import debug
 import pyttsx3
+from threading import Thread
 
-# function returning time in hh:mm:ss
 from configset import configset
 config = configset()
 
 def speak(level = None):
+    """
+    The `speak` function uses pyttsx3 to speak out the battery level in a specified voice and rate.
+    
+    :param level: The `level` parameter in the `speak` function is used to specify the battery level as
+    a percentage. This function utilizes the pyttsx3 library to convert the text "Battery Level is
+    {level}%" into speech, where `{level}` is the value provided as an argument to the function
+    """
     if level:
         engine = pyttsx3.init()
         engine.setProperty('rate', 150)  # Kecepatan bicara (kata per menit)
@@ -41,6 +48,14 @@ def speak(level = None):
         debug("end_speak")
 
 def speakfree(text = None):
+    """
+    The `speakfree` function uses pyttsx3 to speak the provided text with a specific voice and
+    properties.
+    
+    :param text: The `text` parameter in the `speakfree` function is a string that represents the text
+    that will be spoken out loud by the text-to-speech engine. If provided, this text will be converted
+    into speech using the specified voice settings
+    """
     if text:
         engine = pyttsx3.init()
         engine.setProperty('rate', 150)  # Kecepatan bicara (kata per menit)
@@ -129,14 +144,14 @@ def run(test = False):
                 notify.send('battmon', 'PLUG', f'Battery is {status_str}', f'Battery is {status_str}' + test1, ['PLUG', 'FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'icon.png'), pushbullet = False)
                 
                 print(make_colors(f"BATTERY is {status_str} !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
-                speakfree(f"BATTERY is {status_str}!")
+                Thread(target=speakfree, args=(f"BATTERY is {status_str}!", ), daemon=True).start()
                                 
             elif int(battery.percent) == 100 and battery.power_plugged:
                 debug("int(battery.percent) == 100 and battery.power_plugged")
                 notify.send('battmon', 'FULL', 'Battery is FULL', 'Battery is FULL' + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '100.png'), pushbullet = False)
 
                 print(make_colors("BATTERY FULL !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
-                speak(100)
+                Thread(target=speak, args=(100,), daemon=True).start()
                 
                 for i in [10, 11, 20, 30, 40, 50, 60, 70, 80, 90, 98]:
                     config.write_config('step', str(i), '0')
@@ -147,7 +162,7 @@ def run(test = False):
                 notify.send('battmon', 'FULL', 'Battery is 99', 'Battery is 99' + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '90.png'), pushbullet = False)
                 
                 print(make_colors("BATTERY is 99 !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
-                speak(battery.percent)
+                Thread(target=speak, args=(battery.percent), daemon=True).start()
                 time.sleep((config.get_config('sleep', 'willtime', '5') or 5))
                 if not nine == (config.get_config('nine', 'times', '5') or 5):
                     nine += 1
@@ -164,7 +179,7 @@ def run(test = False):
                     nl += 1
 
                 print(make_colors("BATTERY LOW !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
-                speak(battery.percent)
+                Thread(target=speak, args=(battery.percent), daemon=True).start()
                 for i in [10, 11, 20, 30, 40, 50, 60, 70, 80, 90, 98]:
                     config.write_config('step', str(i), '1')                
                 time.sleep((config.get_config('sleep', 'lesstime', '1') or 1))    
@@ -175,28 +190,27 @@ def run(test = False):
             
             if int(battery.percent) in [11, 20, 30, 40, 50, 60, 70, 80, 90, 98]:
                 percent = battery.percent
-                if config.get_config('remind', 'ten'):
-                    if config.get_config('step', str(percent)):
-                        for x in range(0, config.get_config('remind', 'times', '2') + 1):
-                            if not x == config.get_config('remind', 'times', '2'):
-                                stat = "DC - Unplug"
-                                if battery.power_plugged: stat = "AC - Plug"
-                                message = "Battery stat" + " : " + "[{}]".format(percent) + "\n" + str(convertTime(battery.secsleft)) + "\n" + stat + test1
-                                speakfree(f"Battery status is {stat} on level {percent}%")
-                                notify.send('battmon', 'STATUS', 'Battery STATUS', message + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '{}.png'.format(percent)), pushbullet = False)
-                            else:
-                                config.write_config('step', str(percent), '0')
+                if config.get_config('remind', 'ten') and config.get_config('step', str(percent)):
+                    for x in range(0, config.get_config('remind', 'times', '2') + 1):
+                        if not x == config.get_config('remind', 'times', '2'):
+                            stat = "DC - Unplug"
+                            if battery.power_plugged: stat = "AC - Plug"
+                            message = "Battery stat" + " : " + "[{}]".format(percent) + "\n" + str(convertTime(battery.secsleft)) + "\n" + stat + test1
+                            Thread(target=speakfree, args = (f"Battery status is {stat} on level {percent}%", ), daemon=True).start()
+                            notify.send('battmon', 'STATUS', 'Battery STATUS', message + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '{}.png'.format(percent)), pushbullet = False)
+                        else:
+                            config.write_config('step', str(percent), '0')
                                 
             print(make_colors(datetime.strftime(datetime.now(), '%Y/%m/%d %H:%M:%S:%f'), 'lb') + " " + "[" + make_colors(str(os.getpid()), 'b', 'y') + "] " + "-"*shutil.get_terminal_size()[0])
 
     except KeyboardInterrupt:
         print(make_colors("Terminated !" + test1, 'lw', 'r'))
-        speakfree("Battmon Terminated !")
+        Thread(target=speakfree, args=("Battmon Terminated !",), daemon=True).start()
         os.kill(os.getpid(), signal.SIGTERM)
     except:
         CTraceback(*sys.exc_info())
         print(make_colors('ERROR' + test1, 'lw', 'r') + ' ' + traceback.format_exc())
-        speakfree("Battmon ERROR !")
+        Thread(target=speakfree, args=("Battmon ERROR !",), daemon=True).start()
         sys.exit()
         
 def test():
