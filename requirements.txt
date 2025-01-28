@@ -1,0 +1,9 @@
+ctraceback
+psutil
+xnotify
+make_colors
+argparse
+pydebugger
+pyttsx3
+pywin32
+configset
