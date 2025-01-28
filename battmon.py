@@ -4,10 +4,12 @@
 import sys
 from ctraceback import CTraceback
 sys.excepthook = CTraceback
+import concurrent.futures
 import psutil
 import shutil
 import signal
 import traceback
+from pathlib import Path
 import sys, os
 sys.excepthook = traceback.format_exception
 from xnotify import notify
@@ -18,6 +20,11 @@ import argparse
 from pydebugger.debug import debug
 import pyttsx3
 from threading import Thread
+
+import winsound
+import win32gui
+import win32con
+
 
 from configset import configset
 config = configset()
@@ -73,7 +80,23 @@ def speakfree(text = None):
         engine.say(text)
         engine.runAndWait()
         debug("end_speak_free")
+
+def show_message(message):
     
+    # Path to your custom sound file
+    sound_file = "custom_sound.wav"
+
+    # Play the custom sound
+    winsound.PlaySound(str(Path(__file__).parent / 'sound.wav'), winsound.SND_FILENAME | winsound.SND_ASYNC)
+
+    # Show the message box with 'always on top' enabled
+    win32gui.MessageBox(
+        0,  # HWND (0 for no specific parent window)
+        message,  # Text
+        "Battmon",  # Title
+        win32con.MB_OK | win32con.MB_ICONERROR | win32con.MB_TOPMOST  # Flags
+    )
+
 def convertTime(seconds):
     minutes, seconds = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
@@ -144,15 +167,34 @@ def run(test = False):
                 notify.send('battmon', 'PLUG', f'Battery is {status_str}', f'Battery is {status_str}' + test1, ['PLUG', 'FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'icon.png'), pushbullet = False)
                 
                 print(make_colors(f"BATTERY is {status_str} !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
-                Thread(target=speakfree, args=(f"BATTERY is {status_str}!", ), daemon=True).start()
+                # Thread(target=speakfree, args=(f"BATTERY is {status_str}!", ), daemon=True).start()
+                try:
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(speakfree, f"BATTERY is {status_str}!")
+                        result = future.result(timeout = 3)
+                        print(result)
+                except concurrent.futures.TimeoutError:
+                    print("Speak timed out !")
+                
+                show_message(f"BATTERY is {status_str}!")
+                
                                 
             elif int(battery.percent) == 100 and battery.power_plugged:
                 debug("int(battery.percent) == 100 and battery.power_plugged")
                 notify.send('battmon', 'FULL', 'Battery is FULL', 'Battery is FULL' + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '100.png'), pushbullet = False)
 
                 print(make_colors("BATTERY FULL !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
-                Thread(target=speak, args=(100,), daemon=True).start()
+                # Thread(target=speak, args=(100,), daemon=True).start()
+                try:
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(speak, "100")
+                        result = future.result(timeout = 3)
+                        print(result)
+                except concurrent.futures.TimeoutError:
+                    print("Speak timed out !")
                 
+                show_message(f"Battery Level is 100 %")
+                    
                 for i in [10, 11, 20, 30, 40, 50, 60, 70, 80, 90, 98]:
                     config.write_config('step', str(i), '0')
                 time.sleep((config.get_config('sleep', 'fulltime', '2') or 2))
@@ -162,7 +204,18 @@ def run(test = False):
                 notify.send('battmon', 'FULL', 'Battery is 99', 'Battery is 99' + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '90.png'), pushbullet = False)
                 
                 print(make_colors("BATTERY is 99 !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
-                Thread(target=speak, args=(battery.percent), daemon=True).start()
+                # Thread(target=speak, args=(battery.percent), daemon=True).start()
+                
+                try:
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(speak, battery.percent)
+                        result = future.result(timeout = 3)
+                        print(result)
+                except concurrent.futures.TimeoutError:
+                    print("Speak timed out !")
+                
+                show_message(f"Battery Level is {battery.percent} %")
+                
                 time.sleep((config.get_config('sleep', 'willtime', '5') or 5))
                 if not nine == (config.get_config('nine', 'times', '5') or 5):
                     nine += 1
@@ -179,7 +232,17 @@ def run(test = False):
                     nl += 1
 
                 print(make_colors("BATTERY LOW !", 'lw', 'r') + " [" + make_colors(str(os.getpid()), 'b', 'y') + "] " + test)
-                Thread(target=speak, args=(battery.percent), daemon=True).start()
+                # Thread(target=speak, args=(battery.percent), daemon=True).start()
+                try:
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(speak, battery.percent)
+                        result = future.result(timeout = 3)
+                        print(result)
+                except concurrent.futures.TimeoutError:
+                    print("Speak timed out !")
+                
+                show_message(f"Battery Level is {battery.percent} %")
+                
                 for i in [10, 11, 20, 30, 40, 50, 60, 70, 80, 90, 98]:
                     config.write_config('step', str(i), '1')                
                 time.sleep((config.get_config('sleep', 'lesstime', '1') or 1))    
@@ -196,7 +259,17 @@ def run(test = False):
                             stat = "DC - Unplug"
                             if battery.power_plugged: stat = "AC - Plug"
                             message = "Battery stat" + " : " + "[{}]".format(percent) + "\n" + str(convertTime(battery.secsleft)) + "\n" + stat + test1
-                            Thread(target=speakfree, args = (f"Battery status is {stat} on level {percent}%", ), daemon=True).start()
+                            # Thread(target=speakfree, args = (f"Battery status is {stat} on level {percent}%", ), daemon=True).start()
+                            try:
+                                with concurrent.futures.ThreadPoolExecutor() as executor:
+                                    future = executor.submit(speakfree, f"Battery status is {stat} on level {percent}%")
+                                    result = future.result(timeout = 3)
+                                    print(result)
+                            except concurrent.futures.TimeoutError:
+                                print("Speak timed out !")
+                            
+                            show_message(f"Battery status is {stat} on level {percent}%")
+                            
                             notify.send('battmon', 'STATUS', 'Battery STATUS', message + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '{}.png'.format(percent)), pushbullet = False)
                         else:
                             config.write_config('step', str(percent), '0')
@@ -205,12 +278,30 @@ def run(test = False):
 
     except KeyboardInterrupt:
         print(make_colors("Terminated !" + test1, 'lw', 'r'))
-        Thread(target=speakfree, args=("Battmon Terminated !",), daemon=True).start()
+        # Thread(target=speakfree, args=("Battmon Terminated !",), daemon=True).start()
+        try:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(speakfree, "Battmon Terminated !")
+                result = future.result(timeout = 3)
+                print(result)
+        except concurrent.futures.TimeoutError:
+            print("Speak timed out !")
+        
+        show_message("Battmon Terminated !")
         os.kill(os.getpid(), signal.SIGTERM)
     except:
         CTraceback(*sys.exc_info())
         print(make_colors('ERROR' + test1, 'lw', 'r') + ' ' + traceback.format_exc())
-        Thread(target=speakfree, args=("Battmon ERROR !",), daemon=True).start()
+        # Thread(target=speakfree, args=("Battmon ERROR !",), daemon=True).start()
+        try:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(speakfree, "Battmon ERROR !")
+                result = future.result(timeout = 3)
+                print(result)
+        except concurrent.futures.TimeoutError:
+            print("Speak timed out !")
+        
+        show_message("Battmon ERROR !")
         sys.exit()
         
 def test():
