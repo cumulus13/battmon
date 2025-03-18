@@ -177,8 +177,7 @@ def run(test = False):
                     print("Speak timed out !")
                 
                 show_message(f"BATTERY is {status_str}!")
-                
-                                
+                               
             elif int(battery.percent) == 100 and battery.power_plugged:
                 debug("int(battery.percent) == 100 and battery.power_plugged")
                 notify.send('battmon', 'FULL', 'Battery is FULL', 'Battery is FULL' + test1, ['FULL', 'LOW', 'STATUS'], icon = os.path.join(os.path.dirname(os.path.realpath(__file__)), '100.png'), pushbullet = False)
